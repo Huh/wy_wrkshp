@@ -16,3 +16,6 @@ R resources
 - https://rstats.wtf/
 - https://adv-r.hadley.nz/
 - https://r-pkgs.org/
+
+JAGS
+- http://www.uvm.edu/~bbeckage/Teaching/PBIO_294/Manuals/manual.jags.pdf
