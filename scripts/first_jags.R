@@ -25,14 +25,14 @@ writeLines("
 
     # Likelihood
     for(i in 1:n_obs) {
-      y_obs[i] ~ dbinom(p[i], 1)
+      y_obs[i] ~ dbin(p[i], 1)
     }
   }
 ", con = tmpfl)
 ################################################################################
 # Data Creation
 int <- 2
-slope <- 0.4
+slope <- 1.1
 covar <- rnorm(500)
 
 y_det <- int + slope * covar

@@ -1,0 +1,18 @@
+git and GitHub related resources
+
+- https://happygitwithr.com/
+
+git branching model
+
+- https://nvie.com/posts/a-successful-git-branching-model/
+- https://medium.com/@patrickporto/4-branching-workflows-for-git-30d0aaee7bf
+
+RStudio 
+- Webinars: https://www.rstudio.com/resources/webinars/
+- Cheatsheets: https://www.rstudio.com/resources/cheatsheets/
+- Blog: https://blog.rstudio.com/
+
+R resources
+- https://rstats.wtf/
+- https://adv-r.hadley.nz/
+- https://r-pkgs.org/
