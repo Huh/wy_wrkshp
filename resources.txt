@@ -20,3 +20,10 @@ R resources
 JAGS
 - http://www.uvm.edu/~bbeckage/Teaching/PBIO_294/Manuals/manual.jags.pdf
 - http://doingbayesiandataanalysis.blogspot.com/2012/04/negative-binomial-reparameterization.html
+
+Stats/Bayesian/Population Ecology
+- https://www.amazon.com/Ecological-Models-Data-Benjamin-Bolker/dp/0691125228
+- https://www.amazon.com/Ruth-King-Bayesian-Analysis-Population/dp/B008UYM2R2
+- https://oliviergimenez.github.io/
+- https://www.amazon.com/Hierarchical-Modeling-Inference-Ecology-Metapopulations/dp/0123740975
+- https://www.amazon.com/Bayesian-Inference-Applications-William-Link/dp/0123748542
