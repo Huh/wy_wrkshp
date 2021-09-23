@@ -19,3 +19,4 @@ R resources
 
 JAGS
 - http://www.uvm.edu/~bbeckage/Teaching/PBIO_294/Manuals/manual.jags.pdf
+- http://doingbayesiandataanalysis.blogspot.com/2012/04/negative-binomial-reparameterization.html
