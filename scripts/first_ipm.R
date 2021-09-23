@@ -7,11 +7,11 @@ writeLines("
   model{
 
     # Priors
-    mu_r ~ dnorm(-0.4, 0.1)
+    mu_r ~ dnorm(r_prior[1,1], r_prior[1,2])
 
-    for(age in 1:nage) {
+    for(age in 2:nage) {
       for(sex in 1:nsex) {
-        mu_s[age, sex] ~ dnorm(1.5, 0.001)
+        mu_s[age, sex] ~ dnorm(s_prior[age,sex,1], 1/s_prior[age,sex,2])
       }
     }
 
@@ -21,32 +21,50 @@ writeLines("
     ad_sd ~ dunif(0, 50)
     ad_tau <- 1/(ad_sd^2)
 
+    gj_eff ~ dnorm(0, 0.001)
+    gaf_eff ~ dnorm(0, 0.001)
+    gam_eff ~ dnorm(0, 0.001)
+
     # Linear Predictors
     for(yr in 1:nyear) {
       js_eff[yr] ~ dnorm(0, js_tau)T(-10, 10)
       ad_eff[yr] ~ dnorm(0, ad_tau)T(-10, 10)
       logit(R[yr]) <- mu_r
-      logit(S[yr, 2, 1]) <- mu_s[2,1] + js_eff[yr]
+      logit(S[yr, 2, 1]) <- mu_s[2,1] + gj_eff * ndvi[yr] + js_eff[yr]
       S[yr, 2, 2] <- S[yr, 2, 1]
-      logit(S[yr, 3, 1]) <- mu_s[3,1] + ad_eff[yr]
-      logit(S[yr, 3, 2]) <- mu_s[3,2] + ad_eff[yr]
+      logit(S[yr, 3, 1]) <- mu_s[3,1] + gaf_eff * ndvi[yr] + ad_eff[yr]
+      logit(S[yr, 3, 2]) <- mu_s[3,2] + gam_eff * ndvi[yr] + ad_eff[yr]
     }
 
     # First year, condition on...
     for(age in 1:nage) {
       for(sex in 1:nsex) {
-        N[1, age, sex] ~ dnorm(200, 0.0000001)
+        N[1, age, sex] ~ dnorm(n1[age, sex, 1], 1/n1[age, sex, 2])
       }
     }
 
     Ntot[1] <- sum(N[1,1:nage,1:nsex])
 
     # Process Model
+    # Indices follow year, age, sex
     for(yr in 2:nyear) {
       for(sex in 1:nsex) {
-        N[yr, 1, sex] ~ dbinom(R[yr] * 0.5, N[yr, nage, 1])
-        N[yr, 2, sex] <- N[yr-1, 1, sex] * S[yr-1,2,sex]
-        N[yr, 3, sex] <- (N[yr-1, 2, sex] + N[yr-1, 3, sex]) * S[yr-1,3,sex]
+        # Fawns (0-4 months)
+        muN[yr, 1, sex] <- N[yr, 3, 1] * R[yr] * 0.5
+        N[yr, 1, sex] ~ dpois(muN[yr, 1, sex])
+
+        # Juveniles (4-16 months)
+        # Survival in absence of harvest!
+        muN[yr, 2, sex] ~ dbin(S[yr-1, 2, sex], round(N[yr-1, 1, sex]))
+        N[yr, 2, sex] <- muN[yr, 2, sex] - harv[yr, 2, sex]
+
+        # Adults (16+ months)
+        # Survival in absence of harvest!
+        muN[yr, 3, sex] ~ dbin(
+          S[yr-1, 3, sex],
+          round(N[yr-1, 2, sex] + N[yr-1, 3, sex])
+        )
+        N[yr, 3, sex] <- muN[yr, 3, sex] - harv[yr, 3, sex]
       }
       Ny[yr] <- N[yr,1,1] + N[yr,1,2]
       Nf[yr] <- N[yr,2,1] + N[yr,3,1]
@@ -112,6 +130,18 @@ R[,3,1] <- 0.5
 S[,2,] <- 0.65
 S[,3,] <- 0.85
 
+harv <- array(
+  c(10),
+  dim = c(nyear, nage, nsex),
+  dimnames = list(
+    year = 1:nyear,
+    age = 1:nage,
+    sex = 1:nsex
+  )
+)
+
+harv[,1,] <- NA_integer_
+
 # Dev processes
 #N[2, 1, 1] <- N[2, 3, 1] * R
 #N[2, 2, 1] <- N[1, 1, 1] * S[1]
@@ -132,8 +162,9 @@ for(age in 1:nage) {
 for(yr in 2:nyear) {
   for(sex in 1:nsex) {
     N[yr, 1, sex] <- N[yr-1, nage, 1] * R[yr,3,1] * 0.5
-    N[yr, 2, sex] <- N[yr-1, 1, sex] * S[yr-1,2,sex]
-    N[yr, 3, sex] <- (N[yr-1, 2, sex] + N[yr-1, 3, sex]) * S[yr-1,3,sex]
+    N[yr, 2, sex] <- N[yr-1, 1, sex] * S[yr-1,2,sex] - harv[yr,2,sex]
+    N[yr, 3, sex] <- (N[yr-1, 2, sex] + N[yr-1, 3, sex]) * S[yr-1,3,sex] -
+      harv[yr,3,sex]
   }
 }
 
@@ -203,6 +234,19 @@ mf_est %>%
     UCL = mean + 1.96 * sqrt(var)
   )
 ################################################################################
+# Create Priors
+r_prior <- matrix(c(0.4, 0.01), nrow = 1)
+
+s_prior <- array(
+  c(NA_real_, 0.6, 0.85, NA_real_, 0.6, 0.78, rep(0.01, 6)),
+  dim = c(nage, nsex, 2)
+)
+
+n1 <- array(
+  c(118, 70, 788, 118, 70, 150, rep(10000*3, 6)),
+  dim = c(nage, nsex, 2)
+)
+
 # JAGS Prep
 jdat <- list(
   nage = nage,
@@ -213,7 +257,12 @@ jdat <- list(
   nr = nrow(yf_est),
   yf_est = yf_est,
   nmf = nrow(mf_est),
-  mf_est = mf_est
+  mf_est = mf_est,
+  r_prior = r_prior,
+  s_prior = s_prior,
+  n1 = n1,
+  harv = harv,
+  ndvi = rnorm(nyear)
 )
 
 jinit <- function() {
@@ -222,7 +271,7 @@ jinit <- function() {
   )
 }
 
-jparam <- c("N", "mfrat", "S", "R", "deviance")
+jparam <- c("N", "mfrat", "S", "R", "deviance", "gj_eff", "gam_eff", "gaf_eff")
 
 ################################################################################
 # Call Model
@@ -239,3 +288,5 @@ fit <- jagsUI::jags(
   modules = c("glm", "dic"),
   DIC = TRUE
 )
+
+################################################################################
